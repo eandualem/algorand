@@ -1,4 +1,5 @@
 from algosdk import account, mnemonic
+from algosdk.v2client import algod
 
 
 def generate_algorand_keypair():
@@ -20,3 +21,9 @@ generate_algorand_keypair()
     My private key: /uFqnV/O93GrtwVpsK5sNg1j2Y+BCXVBaEQmpKZnEtuyYTlm+wraenIvSgW5iqfgupiLO0clsb0UC/SrB5+3uA==
     My passphrase: divert process solid tourist usage symbol run aisle artwork river curve square ship wagon arrest another concert patient captain draw essence okay sudden absorb dove
 '''
+
+
+def first_transaction_example(private_key, my_address):
+    algod_address = "http://localhost:4001"
+    algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    algod_client = algod.AlgodClient(algod_token, algod_address)
