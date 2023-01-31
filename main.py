@@ -1,29 +1,54 @@
-from algosdk import account, mnemonic
+import os
+import json
+import base64
+from algosdk import constants
+from dotenv import load_dotenv
+from algosdk import transaction
 from algosdk.v2client import algod
+from algosdk import account, mnemonic
 
 
-def generate_algorand_keypair():
-    private_key, address = account.generate_account()
-    print("My address: {}".format(address))
-    print("My private key: {}".format(private_key))
-    print("My passphrase: {}".format(mnemonic.from_private_key(private_key)))
+class AlgodHelper():
+    def __init__(self):
+        load_dotenv()
+        self.algod_address = os.getenv('algod_address')
+        self.algod_token = os.getenv('algod_token')
+        self.algod_client = os.getenv('algod_client')
 
+    def generate_algorand_keypair(self):
+        private_key, address = account.generate_account()
+        print("My address: {}".format(address))
+        print("My private key: {}".format(private_key))
+        print("My passphrase: {}".format(mnemonic.from_private_key(private_key)))
 
-generate_algorand_keypair()
-''' First set of keypair
-    My address: EJUTBX26SG2MWRFXB2PPB3TLME4Z5DIAT56JFUXXFGMFHR6E6EQBAVHNBI
-    My private key: iYG8RLbgVtEQ82iEuYzzDJ1Ti7655osE5ersOny6wv8iaTDfXpG0y0S3Dp7w7mthOZ6NAJ98ktL3KZhTx8TxIA==
-    My passphrase: couple velvet car arena punch crowd obtain happy correct cream keep speak poet people social trade multiply neglect install put wear purse wrap abstract program
-'''
+    def check_balance(self, address):
+        account_info = self.algod_client.account_info(address)
+        print("Account balance: {} microAlgos".format(account_info.get('amount')) + "\n")
+        return account_info
 
-''' Second set of keypair
-    My address: WJQTSZX3BLNHU4RPJIC3TCVH4C5JRCZ3I4S3DPIUBP2KWB47W64OB3YIEI
-    My private key: /uFqnV/O93GrtwVpsK5sNg1j2Y+BCXVBaEQmpKZnEtuyYTlm+wraenIvSgW5iqfgupiLO0clsb0UC/SrB5+3uA==
-    My passphrase: divert process solid tourist usage symbol run aisle artwork river curve square ship wagon arrest another concert patient captain draw essence okay sudden absorb dove
-'''
+    def sign_transaction(self, unsigned_txn):
+        signed_txn = unsigned_txn.sign(self.private_key)
+        return signed_txn
 
+    def submit_transaction(self, signed_txn):
+        txid = self.algod_client.send_transaction(signed_txn)
+        print("Successfully sent transaction with txID: {}".format(txid))
+        return txid
 
-def first_transaction_example(private_key, my_address):
-    algod_address = "http://localhost:4001"
-    algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    algod_client = algod.AlgodClient(algod_token, algod_address)
+    def wait_confirmation(self, txid):
+        # wait for confirmation
+        try:
+            return transaction.wait_for_confirmation(self.algod_client, txid, 4)
+        except Exception as err:
+            print(err)
+            return
+
+    def make_transaction(self, private_key, my_address, receiver, note, amount):
+        params = self.algod_client.suggested_params()
+        params.flat_fee = True
+        params.fee = constants.MIN_TXN_FEE
+
+        unsigned_txn = transaction.PaymentTxn(my_address, params, receiver, amount, None, note)
+        signed_txn = self.sign_transaction(unsigned_txn)
+        self.submit_transaction(signed_txn)
+        self.wait_confirmation()
